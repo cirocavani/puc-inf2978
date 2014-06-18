@@ -109,9 +109,9 @@ func LoadGraph(path string) (*Graph, error) {
 
 	parser := EDGES
 	scan := bufio.NewScanner(file)
-	scan.Scan() //skep line 1
-	scan.Scan() //skep line 2
-	scan.Scan() //skep line 3
+	scan.Scan() //skip line 1
+	scan.Scan() //skip line 2
+	scan.Scan() //skip line 3
 	for scan.Scan() {
 		line := scan.Text()
 		//fmt.Println(">>", line)

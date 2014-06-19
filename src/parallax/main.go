@@ -21,8 +21,8 @@ type FirstEdges struct {
 	graphs *graph.GraphLoader
 }
 
-func (t *FirstEdges) ComputeBid(m *engine.Match) *engine.BidPack {
-	g := t.graphs.Instance(m.InstanceName)
+func (n *FirstEdges) ComputeBid(m *engine.Match) *engine.BidPack {
+	g := n.graphs.Instance(m.InstanceName)
 	if g == nil {
 		fmt.Println("Instance not found:", m.InstanceName)
 		return engine.EmptyBidPack()
@@ -35,7 +35,7 @@ func (t *FirstEdges) ComputeBid(m *engine.Match) *engine.BidPack {
 	return pack
 }
 
-func (t *FirstEdges) Update(f *engine.Flow) {
+func (n *FirstEdges) Update(f *engine.Flow) {
 }
 
 func main() {

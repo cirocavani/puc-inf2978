@@ -357,7 +357,7 @@ type Bid struct {
 }
 
 func (b *Bid) String() string {
-	return fmt.Sprint(b.source, b.sink, b.price)
+	return fmt.Sprintf("%d %d %.2f", b.source, b.sink, b.price)
 }
 
 func NewBid(source, sink int, price float64) *Bid {
@@ -392,6 +392,66 @@ func (p *BidPack) Bid(source, sink int, price float64) *Bid {
 	bid := NewBid(source, sink, price)
 	p.bids = append(p.bids, bid)
 	return bid
+}
+
+type Proffit struct {
+	name  string
+	value float64
+}
+
+type ProffitSlice []*Proffit
+
+func (p *Proffit) String() string {
+	return fmt.Sprintf("%s %.2f", p.name, p.value)
+}
+
+func (m ProffitSlice) String() string {
+	out := ""
+	for i, p := range m {
+		if i != 0 {
+			out += "\n"
+		}
+		out += p.String()
+	}
+	return out
+}
+
+func ParseProffit(m string) (*Proffit, error) {
+	n := strings.Fields(m)
+	if len(n) != 2 {
+		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
+	}
+	name := n[0]
+	value, err := strconv.ParseFloat(n[1], 64)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing value of proffits: %s", err)
+	}
+	return &Proffit{name, value}, nil
+}
+
+func ParseProffits(m string, buf *bufio.Reader) (ProffitSlice, error) {
+	n := strings.Fields(m)
+	if len(n) != 2 {
+		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
+	}
+	k, err := strconv.ParseInt(n[1], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing number of proffits: %s", err)
+	}
+	proffits := make(ProffitSlice, k)
+	for i := 0; i < int(k); i++ {
+		p, err := buf.ReadString('\n')
+		if err != nil {
+			return nil, fmt.Errorf("Error reading proffit (%d): %s", i+1, err)
+		}
+		p = strings.TrimSpace(p)
+		pi, err := ParseProffit(p)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing proffit (%d): %s", i+1, err)
+		}
+		proffits[i] = pi
+	}
+	return proffits, nil
 }
 
 type Engine interface {
@@ -450,6 +510,14 @@ func (h *Handler) Run(conn io.ReadWriter) {
 			}
 			h.engine.Update(t)
 		} else if strings.HasPrefix(m, "end") {
+			t, err := ParseProffits(m, master)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			if *verbose > 0 {
+				fmt.Println("Proffit:", t)
+			}
 			fmt.Println("Parallax> that's all for now!")
 			break
 		} else {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"runtime"
@@ -11,11 +12,14 @@ import (
 	"strings"
 )
 
-var optThreads = flag.Int("threads", runtime.NumCPU(), "Number of system threads")
+var optName = flag.String("name", "Parallax", "Player Name")
 var optServer = flag.String("server", "localhost:8080", "Game server")
 var optData = flag.String("data", "./data", "Directory with FCTP data files")
 var optPreload = flag.Bool("load", true, "Load all data files (instances)")
-var verbose = flag.Bool("verbose", false, "Print a lot of messages")
+var optThreads = flag.Int("threads", runtime.NumCPU(), "Number of system threads")
+var verbose = flag.Int("verbose", 1, "Print a lot of messages, level 0, 1, 2, 3")
+
+// FCTP data model
 
 type Vertex struct {
 	id    int
@@ -53,17 +57,18 @@ func NewGraph() *Graph {
 	}
 }
 
+func (g *Graph) v(m map[int]*Vertex, id int) *Vertex {
+	v, found := m[id]
+	if !found {
+		v = &Vertex{id, .0, make([]*Edge, 0)}
+		m[id] = v
+	}
+	return v
+}
+
 func (g *Graph) NewEdge(i, j int, v, f float64) *Edge {
-	vi, found := g.sources[i]
-	if !found {
-		vi = &Vertex{i, .0, make([]*Edge, 0)}
-		g.sources[i] = vi
-	}
-	vj, found := g.sinks[j]
-	if !found {
-		vj = &Vertex{j, .0, make([]*Edge, 0)}
-		g.sinks[j] = vj
-	}
+	vi := g.v(g.sources, i)
+	vj := g.v(g.sinks, j)
 	e := &Edge{vi, vj, v, f}
 	vi.edges = append(vi.edges, e)
 	vj.edges = append(vj.edges, e)
@@ -72,21 +77,13 @@ func (g *Graph) NewEdge(i, j int, v, f float64) *Edge {
 }
 
 func (g *Graph) SourceSize(i int, s float64) *Vertex {
-	vi, found := g.sources[i]
-	if !found {
-		vi = &Vertex{i, .0, make([]*Edge, 0)}
-		g.sources[i] = vi
-	}
+	vi := g.v(g.sources, i)
 	vi.size = s
 	return vi
 }
 
 func (g *Graph) SinkSize(j int, s float64) *Vertex {
-	vj, found := g.sinks[j]
-	if !found {
-		vj = &Vertex{j, .0, make([]*Edge, 0)}
-		g.sinks[j] = vj
-	}
+	vj := g.v(g.sinks, j)
 	vj.size = s
 	return vj
 }
@@ -114,7 +111,9 @@ func LoadGraph(path string) (*Graph, error) {
 	scan.Scan() //skip line 3
 	for scan.Scan() {
 		line := scan.Text()
-		//fmt.Println(">>", line)
+		if *verbose > 2 {
+			fmt.Println(">>", line)
+		}
 		if line == "S" {
 			parser = SUPPLY
 			continue
@@ -153,7 +152,7 @@ func LoadGraph(path string) (*Graph, error) {
 				continue
 			}
 			e := g.NewEdge(int(i), int(j), v, f)
-			if *verbose {
+			if *verbose > 1 {
 				fmt.Println("New Edge:", e)
 			}
 		} else if parser == SUPPLY {
@@ -172,7 +171,7 @@ func LoadGraph(path string) (*Graph, error) {
 				continue
 			}
 			v := g.SourceSize(int(i), s)
-			if *verbose {
+			if *verbose > 1 {
 				fmt.Println("Supply:", v)
 			}
 		} else if parser == DEMAND {
@@ -191,7 +190,7 @@ func LoadGraph(path string) (*Graph, error) {
 				continue
 			}
 			v := g.SinkSize(int(j), s)
-			if *verbose {
+			if *verbose > 1 {
 				fmt.Println("Demand:", v)
 			}
 		} else {
@@ -251,15 +250,120 @@ func LoadAllInstances() {
 	fmt.Println("Total:", len(INSTANCES))
 }
 
+// Game Protocol
+
+type Match struct {
+	instanceName string
+	edges        int
+}
+
+func (m *Match) String() string {
+	return fmt.Sprint(m.instanceName, " ", m.edges)
+}
+
+func ParseMatch(m string) (*Match, error) {
+	n := strings.Fields(m)
+	if len(n) != 3 {
+		return nil, fmt.Errorf("Wrong number of fields (3): %d", len(n))
+	}
+	instanceName := n[1]
+	edges, err := strconv.ParseInt(n[2], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing number of edges: %s", err)
+	}
+	return &Match{instanceName, int(edges)}, nil
+}
+
+type Flow struct {
+	streams []*Stream
+}
+
+type Stream struct {
+	source, sink int
+	amount       float64
+	owner        string
+	price        float64
+	bids         int
+}
+
+func (f *Flow) String() string {
+	return fmt.Sprint("Number of Edges ", len(f.streams))
+}
+
+func ParseStream(m string) (*Stream, error) {
+	n := strings.Fields(m)
+	if len(n) != 6 {
+		return nil, fmt.Errorf("Wrong number of fields (6): %d", len(n))
+	}
+	source, err := strconv.ParseInt(n[0], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing result source: %s", err)
+	}
+	sink, err := strconv.ParseInt(n[1], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing result sink: %s", err)
+	}
+	owner := n[2]
+	bids, err := strconv.ParseInt(n[3], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing result number of bids: %s", err)
+	}
+	price, err := strconv.ParseFloat(n[4], 64)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing result bid: %s", err)
+	}
+	amount, err := strconv.ParseFloat(n[5], 64)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing result amount: %s", err)
+	}
+	return &Stream{
+		int(source),
+		int(sink),
+		amount,
+		owner,
+		price,
+		int(bids),
+	}, nil
+}
+
+func ParseFlow(m string, buf *bufio.Reader) (*Flow, error) {
+	n := strings.Fields(m)
+	if len(n) != 2 {
+		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
+	}
+	k, err := strconv.ParseInt(n[1], 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing number of results: %s", err)
+	}
+	streams := make([]*Stream, k)
+	for i := 0; i < int(k); i++ {
+		r, err := buf.ReadString('\n')
+		if err != nil {
+			return nil, fmt.Errorf("Error reading stream result (%d): %s", i+1, err)
+		}
+		r = strings.TrimSpace(r)
+		s, err := ParseStream(r)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing stream result (%d): %s", i+1, err)
+		}
+		streams[i] = s
+	}
+	return &Flow{streams}, nil
+}
+
 type Bid struct {
 	source, sink int
 	price        float64
 }
 
-func NewBid(edge *Edge, price float64) *Bid {
+func (b *Bid) String() string {
+	return fmt.Sprint(b.source, b.sink, b.price)
+}
+
+func NewBid(source, sink int, price float64) *Bid {
 	return &Bid{
-		source: edge.i.id,
-		sink:   edge.j.id,
+		source: source,
+		sink:   sink,
 		price:  price,
 	}
 }
@@ -268,16 +372,10 @@ type BidPack struct {
 	bids []*Bid
 }
 
-func (t *BidPack) String() string {
-	out := "bid\n"
-	first := true
-	for _, n := range t.bids {
-		if first {
-			first = false
-		} else {
-			out += "\n"
-		}
-		out += fmt.Sprint(n.source, n.sink, n.price)
+func (p *BidPack) String() string {
+	out := "bid"
+	for _, b := range p.bids {
+		out += "\n" + b.String()
 	}
 	return out
 }
@@ -286,31 +384,31 @@ func NewBidPack(capacity int) *BidPack {
 	return &BidPack{make([]*Bid, 0, capacity)}
 }
 
-func (p *BidPack) add(bid *Bid) {
+func EmptyBidPack() *BidPack {
+	return NewBidPack(0)
+}
+
+func (p *BidPack) Bid(source, sink int, price float64) *Bid {
+	bid := NewBid(source, sink, price)
 	p.bids = append(p.bids, bid)
+	return bid
 }
 
-func Bidding(instanceName string, edges int) *BidPack {
-	g := Instance(instanceName)
-	if g == nil {
-		fmt.Println("Instance not found:", instanceName)
-		return nil
-	}
-	pack := NewBidPack(edges)
-	for i := 0; i < edges; i++ {
-		e := g.edges[i]
-		pack.add(NewBid(e, e.vCost))
-	}
-	return pack
+type Engine interface {
+	ComputeBid(m *Match) *BidPack
+	Update(f *Flow)
 }
 
-func Connect() {
-	conn, err := net.Dial("tcp", *optServer)
-	if err != nil {
-		fmt.Println("Error connecting", *optServer)
-		return
-	}
-	defer conn.Close()
+type Handler struct {
+	name   string
+	engine Engine
+}
+
+func NewHandler(name string, engine Engine) *Handler {
+	return &Handler{name, engine}
+}
+
+func (h *Handler) Run(conn io.ReadWriter) {
 	master := bufio.NewReader(conn)
 	for {
 		m, err := master.ReadString('\n')
@@ -319,34 +417,80 @@ func Connect() {
 			break
 		}
 		m = strings.TrimSpace(m)
-		fmt.Println("Master> ", m)
+		fmt.Println("Master>", m)
 		if m == "name" {
-			fmt.Println("Parallax> name Parallax")
-			fmt.Fprint(conn, "name Parallax")
+			name := "name " + h.name
+			fmt.Println("Parallax>", name)
+			fmt.Fprint(conn, name)
 		} else if strings.HasPrefix(m, "instance") {
-			n := strings.Fields(m)
-			instanceName := n[1]
-			edges, err := strconv.ParseInt(n[2], 10, 0)
+			t, err := ParseMatch(m)
 			if err != nil {
-				fmt.Println("Error parsing number of edges:", err)
+				fmt.Println(err)
 				continue
 			}
-			if *verbose {
-				fmt.Println("Instance:", instanceName)
-				fmt.Println("Number of Edges:", edges)
+			if *verbose > 0 {
+				fmt.Println("Match:", t)
 			}
-			result := Bidding(instanceName, int(edges))
+			result := h.engine.ComputeBid(t)
 			fmt.Println("Parallax>")
-			fmt.Println(result)
+			_out := result.String()
+			if *verbose < 2 && len(_out) > 50 {
+				_out = _out[0:50] + "..."
+			}
+			fmt.Println(_out)
 			fmt.Fprint(conn, result)
+		} else if strings.HasPrefix(m, "result") {
+			t, err := ParseFlow(m, master)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			if *verbose > 0 {
+				fmt.Println("Flow:", t)
+			}
+			h.engine.Update(t)
+		} else if strings.HasPrefix(m, "end") {
+			fmt.Println("Parallax> that's all for now!")
+			break
 		} else {
-			fmt.Println("unknown")
+			fmt.Println("Parallax> dont know what to do!")
 		}
 	}
 }
 
+func (h *Handler) Connect(server string) {
+	conn, err := net.Dial("tcp", server)
+	if err != nil {
+		fmt.Println("Error connecting", server)
+		return
+	}
+	defer conn.Close()
+	h.Run(conn)
+}
+
+// Dummy Player
+
+type FirstEdges struct{}
+
+func (*FirstEdges) ComputeBid(m *Match) *BidPack {
+	g := Instance(m.instanceName)
+	if g == nil {
+		fmt.Println("Instance not found:", m.instanceName)
+		return EmptyBidPack()
+	}
+	pack := NewBidPack(m.edges)
+	for i := 0; i < m.edges; i++ {
+		e := g.edges[i]
+		pack.Bid(e.i.id, e.j.id, e.vCost)
+	}
+	return pack
+}
+
+func (*FirstEdges) Update(f *Flow) {
+}
+
 func main() {
-	fmt.Println("Game Theory Player: Parallax")
+	fmt.Println("Game Theory Player: Parallax Engine")
 
 	flag.Parse()
 
@@ -357,5 +501,7 @@ func main() {
 		LoadAllInstances()
 	}
 
-	Connect()
+	engine := &FirstEdges{}
+	handler := NewHandler(*optName, engine)
+	handler.Connect(*optServer)
 }

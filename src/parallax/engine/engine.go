@@ -20,7 +20,7 @@ func (m *Match) String() string {
 	return fmt.Sprint(m.InstanceName, " ", m.NumberOfEdges)
 }
 
-func ParseMatch(m string) (*Match, error) {
+func parseMatch(m string) (*Match, error) {
 	n := strings.Fields(m)
 	if len(n) != 3 {
 		return nil, fmt.Errorf("Wrong number of fields (3): %d", len(n))
@@ -49,7 +49,7 @@ func (f *Flow) String() string {
 	return fmt.Sprint("Number of Edges ", len(f.Streams))
 }
 
-func ParseStream(m string) (*Stream, error) {
+func parseStream(m string) (*Stream, error) {
 	n := strings.Fields(m)
 	if len(n) != 6 {
 		return nil, fmt.Errorf("Wrong number of fields (6): %d", len(n))
@@ -85,7 +85,7 @@ func ParseStream(m string) (*Stream, error) {
 	}, nil
 }
 
-func ParseFlow(m string, buf *bufio.Reader) (*Flow, error) {
+func parseFlow(m string, buf *bufio.Reader) (*Flow, error) {
 	n := strings.Fields(m)
 	if len(n) != 2 {
 		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
@@ -101,7 +101,7 @@ func ParseFlow(m string, buf *bufio.Reader) (*Flow, error) {
 			return nil, fmt.Errorf("Error reading stream result (%d): %s", i+1, err)
 		}
 		r = strings.TrimSpace(r)
-		s, err := ParseStream(r)
+		s, err := parseStream(r)
 		if err != nil {
 			return nil, fmt.Errorf("Error parsing stream result (%d): %s", i+1, err)
 		}
@@ -175,7 +175,7 @@ func (pp ProffitSlice) String() string {
 	return out
 }
 
-func ParseProffit(m string) (*Proffit, error) {
+func parseProffit(m string) (*Proffit, error) {
 	n := strings.Fields(m)
 	if len(n) != 2 {
 		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
@@ -188,7 +188,7 @@ func ParseProffit(m string) (*Proffit, error) {
 	return &Proffit{name, value}, nil
 }
 
-func ParseProffits(m string, buf *bufio.Reader) (ProffitSlice, error) {
+func parseProffits(m string, buf *bufio.Reader) (ProffitSlice, error) {
 	n := strings.Fields(m)
 	if len(n) != 2 {
 		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
@@ -204,7 +204,7 @@ func ParseProffits(m string, buf *bufio.Reader) (ProffitSlice, error) {
 			return nil, fmt.Errorf("Error reading proffit (%d): %s", i+1, err)
 		}
 		p = strings.TrimSpace(p)
-		pi, err := ParseProffit(p)
+		pi, err := parseProffit(p)
 		if err != nil {
 			return nil, fmt.Errorf("Error parsing proffit (%d): %s", i+1, err)
 		}
@@ -243,7 +243,7 @@ func (h *Handler) Run(conn io.ReadWriter) {
 			fmt.Println("Parallax>", name)
 			fmt.Fprint(conn, name)
 		} else if strings.HasPrefix(m, "instance") {
-			n, err := ParseMatch(m)
+			n, err := parseMatch(m)
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -260,7 +260,7 @@ func (h *Handler) Run(conn io.ReadWriter) {
 			fmt.Println(_out)
 			fmt.Fprint(conn, result)
 		} else if strings.HasPrefix(m, "result") {
-			n, err := ParseFlow(m, master)
+			n, err := parseFlow(m, master)
 			if err != nil {
 				fmt.Println(err)
 				continue
@@ -270,7 +270,7 @@ func (h *Handler) Run(conn io.ReadWriter) {
 			}
 			h.engine.Update(n)
 		} else if strings.HasPrefix(m, "end") {
-			n, err := ParseProffits(m, master)
+			n, err := parseProffits(m, master)
 			if err != nil {
 				fmt.Println(err)
 				break

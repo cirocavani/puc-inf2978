@@ -39,7 +39,7 @@ func (t *FirstEdges) Update(f *engine.Flow) {
 }
 
 func main() {
-	fmt.Println("Game Theory Player: Parallax Engine")
+	fmt.Println("Parallax Engine: Game Theory Player")
 
 	flag.Parse()
 

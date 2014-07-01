@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"parallax/core"
 	"parallax/engine"
-	"parallax/graph"
+	"parallax/fct"
 	"runtime"
 )
 
@@ -24,7 +24,7 @@ func main() {
 	fmt.Println("Threads:", *optThreads)
 	runtime.GOMAXPROCS(*optThreads)
 
-	graphs := graph.NewLoader(*optData, *verbose)
+	graphs := fct.NewLoader(*optData, *verbose)
 	if *optPreload {
 		graphs.LoadAll()
 	}

@@ -1,4 +1,4 @@
-package tool
+package grb
 
 /*
 #include "gurobi_c.h"
@@ -11,54 +11,54 @@ import (
 )
 
 const (
-	GRB_INFINITY  float64 = 1e100
-	GRB_UNDEFINED         = 1e101
-	GRB_MAXINT            = 2000000000
+	INFINITY  float64 = 1e100
+	UNDEFINED         = 1e101
+	MAXINT            = 2000000000
 )
 
-type ConstrExpr map[*GRBVar]float64
+type ConstrExpr map[*Var]float64
 
 type ConstrOp int
 
 const (
-	GRB_LESS_EQUAL    ConstrOp = '<'
-	GRB_GREATER_EQUAL          = '>'
-	GRB_EQUAL                  = '='
+	LESS_EQUAL    ConstrOp = '<'
+	GREATER_EQUAL          = '>'
+	EQUAL                  = '='
 )
 
-type GRBEnv struct {
+type Env struct {
 	log *C.char
 	env *C.struct__GRBenv
 }
 
-type GRBModel struct {
+type Model struct {
 	name  *C.char
 	model *C.struct__GRBmodel
 
-	env     *GRBEnv
-	vars    map[string]*GRBVar
-	constrs map[string]*GRBConstr
+	env     *Env
+	vars    map[string]*Var
+	constrs map[string]*Constr
 }
 
-type GRBVar struct {
+type Var struct {
 	name *C.char
 
-	model        *GRBModel
+	model        *Model
 	varType      int
 	obj          float64
 	lower, upper float64
 }
 
-type GRBConstr struct {
+type Constr struct {
 	name *C.char
 
-	model *GRBModel
+	model *Model
 	expr  ConstrExpr
 	op    ConstrOp
 	value float64
 }
 
-func NewGRBEnv(log string) (*GRBEnv, error) {
+func NewEnv(log string) (*Env, error) {
 	clog := C.CString(log)
 	var env *C.struct__GRBenv = nil
 	result := int(C.GRBloadenv(&env, clog))
@@ -66,28 +66,28 @@ func NewGRBEnv(log string) (*GRBEnv, error) {
 		C.free(unsafe.Pointer(clog))
 		return nil, fmt.Errorf("%d", result)
 	}
-	return &GRBEnv{clog, env}, nil
+	return &Env{clog, env}, nil
 }
 
-func (env *GRBEnv) Dispose() {
+func (env *Env) Dispose() {
 	C.GRBfreeenv(env.env)
 	C.free(unsafe.Pointer(env.log))
 	env.env = nil
 	env.log = nil
 }
 
-func (env *GRBEnv) ErrorMessage() string {
+func (env *Env) ErrorMessage() string {
 	if m := C.GRBgeterrormsg(env.env); m != nil {
 		return C.GoString(m)
 	}
 	return "empty"
 }
 
-func (env *GRBEnv) error(code int) error {
+func (env *Env) error(code int) error {
 	return fmt.Errorf("%d: %s", code, env.ErrorMessage())
 }
 
-func NewGRBModel(env *GRBEnv, name string) (*GRBModel, error) {
+func NewModel(env *Env, name string) (*Model, error) {
 	cname := C.CString(name)
 	cnumv := C.int(0)
 	var model *C.struct__GRBmodel = nil
@@ -96,16 +96,16 @@ func NewGRBModel(env *GRBEnv, name string) (*GRBModel, error) {
 		C.free(unsafe.Pointer(cname))
 		return nil, env.error(result)
 	}
-	return &GRBModel{
+	return &Model{
 		cname,
 		model,
 		env,
-		make(map[string]*GRBVar),
-		make(map[string]*GRBConstr),
+		make(map[string]*Var),
+		make(map[string]*Constr),
 	}, nil
 }
 
-func (m *GRBModel) Dispose() {
+func (m *Model) Dispose() {
 	m.env = nil
 
 	C.GRBfreemodel(m.model)
@@ -122,19 +122,19 @@ func (m *GRBModel) Dispose() {
 	m.name = nil
 }
 
-func (v *GRBVar) dispose() {
+func (v *Var) dispose() {
 	C.free(unsafe.Pointer(v.name))
 	v.name = nil
 	v.model = nil
 }
 
-func (c *GRBConstr) dispose() {
+func (c *Constr) dispose() {
 	C.free(unsafe.Pointer(c.name))
 	c.name = nil
 	c.model = nil
 }
 
-func (v *GRBVar) Index() (int, error) {
+func (v *Var) Index() (int, error) {
 	index := C.int(-1)
 	result := int(C.GRBgetvarbyname(v.model.model, v.name, &index))
 	if result != 0 {
@@ -143,7 +143,7 @@ func (v *GRBVar) Index() (int, error) {
 	return int(index), nil
 }
 
-func (v *GRBVar) Value() (float64, error) {
+func (v *Var) Value() (float64, error) {
 	i, err := v.Index()
 	if err != nil {
 		return 0., err
@@ -159,7 +159,7 @@ func (v *GRBVar) Value() (float64, error) {
 	return float64(value), nil
 }
 
-func (m *GRBModel) addVar(name string, t int, obj, lower, upper float64) *GRBVar {
+func (m *Model) addVar(name string, t int, obj, lower, upper float64) *Var {
 	cname := C.CString(name)
 	ctype := C.char(t)
 	cobj := C.double(obj)
@@ -170,32 +170,32 @@ func (m *GRBModel) addVar(name string, t int, obj, lower, upper float64) *GRBVar
 		C.free(unsafe.Pointer(cname))
 		return nil
 	}
-	v := &GRBVar{cname, m, t, obj, lower, upper}
+	v := &Var{cname, m, t, obj, lower, upper}
 	m.vars[name] = v
 	return v
 }
 
-func (m *GRBModel) AddContVar(name string, obj, lower, upper float64) *GRBVar {
+func (m *Model) AddContVar(name string, obj, lower, upper float64) *Var {
 	return m.addVar(name, 'C', obj, lower, upper)
 }
 
-func (m *GRBModel) AddSemiContVar(name string, obj, lower, upper float64) *GRBVar {
+func (m *Model) AddSemiContVar(name string, obj, lower, upper float64) *Var {
 	return m.addVar(name, 'S', obj, lower, upper)
 }
 
-func (m *GRBModel) AddIntVar(name string, lower, upper, obj float64) *GRBVar {
+func (m *Model) AddIntVar(name string, lower, upper, obj float64) *Var {
 	return m.addVar(name, 'I', obj, lower, upper)
 }
 
-func (m *GRBModel) AddSemiIntVar(name string, obj, lower, upper float64) *GRBVar {
+func (m *Model) AddSemiIntVar(name string, obj, lower, upper float64) *Var {
 	return m.addVar(name, 'N', obj, lower, upper)
 }
 
-func (m *GRBModel) AddBinaryVar(name string, obj, lower, upper float64) *GRBVar {
+func (m *Model) AddBinaryVar(name string, obj, lower, upper float64) *Var {
 	return m.addVar(name, 'B', obj, lower, upper)
 }
 
-func (m *GRBModel) AddConstr(name string, expr ConstrExpr, op ConstrOp, value float64) *GRBConstr {
+func (m *Model) AddConstr(name string, expr ConstrExpr, op ConstrOp, value float64) *Constr {
 	cnumv := C.int(len(expr))
 	cindex := make([]C.int, len(expr))
 	ccoef := make([]C.double, len(expr))
@@ -217,12 +217,12 @@ func (m *GRBModel) AddConstr(name string, expr ConstrExpr, op ConstrOp, value fl
 		C.free(unsafe.Pointer(cname))
 		return nil
 	}
-	c := &GRBConstr{cname, m, expr, op, value}
+	c := &Constr{cname, m, expr, op, value}
 	m.constrs[name] = c
 	return c
 }
 
-func (m *GRBModel) GetIntAttr(attr string) (int, error) {
+func (m *Model) GetIntAttr(attr string) (int, error) {
 	ATTR := C.CString(attr)
 	defer C.free(unsafe.Pointer(ATTR))
 	VALUE := C.int(-1)
@@ -233,7 +233,7 @@ func (m *GRBModel) GetIntAttr(attr string) (int, error) {
 	return int(VALUE), nil
 }
 
-func (m *GRBModel) SetIntAttr(attr string, value int) error {
+func (m *Model) SetIntAttr(attr string, value int) error {
 	ATTR := C.CString(attr)
 	defer C.free(unsafe.Pointer(ATTR))
 	VALUE := C.int(value)
@@ -244,7 +244,7 @@ func (m *GRBModel) SetIntAttr(attr string, value int) error {
 	return nil
 }
 
-func (m *GRBModel) GetDoubleAttr(attr string) (float64, error) {
+func (m *Model) GetDoubleAttr(attr string) (float64, error) {
 	ATTR := C.CString(attr)
 	defer C.free(unsafe.Pointer(ATTR))
 	VALUE := C.double(0.)
@@ -255,7 +255,7 @@ func (m *GRBModel) GetDoubleAttr(attr string) (float64, error) {
 	return float64(VALUE), nil
 }
 
-func (m *GRBModel) SetDoubleAttr(attr string, value float64) error {
+func (m *Model) SetDoubleAttr(attr string, value float64) error {
 	ATTR := C.CString(attr)
 	defer C.free(unsafe.Pointer(ATTR))
 	VALUE := C.double(value)
@@ -266,15 +266,15 @@ func (m *GRBModel) SetDoubleAttr(attr string, value float64) error {
 	return nil
 }
 
-func (m *GRBModel) SetMaximize() {
+func (m *Model) SetMaximize() {
 	m.SetIntAttr("ModelSense", -1 /* Maximize */)
 }
 
-func (m *GRBModel) SetMinimize() {
+func (m *Model) SetMinimize() {
 	m.SetIntAttr("ModelSense", 1 /* Minimize */)
 }
 
-func (m *GRBModel) Update() error {
+func (m *Model) Update() error {
 	result := int(C.GRBupdatemodel(m.model))
 	if result != 0 {
 		return m.env.error(result)
@@ -282,7 +282,7 @@ func (m *GRBModel) Update() error {
 	return nil
 }
 
-func (m *GRBModel) Optimize() error {
+func (m *Model) Optimize() error {
 	result := int(C.GRBoptimize(m.model))
 	if result != 0 {
 		return m.env.error(result)
@@ -290,7 +290,7 @@ func (m *GRBModel) Optimize() error {
 	return nil
 }
 
-func (m *GRBModel) Optimal() (bool, error) {
+func (m *Model) Optimal() (bool, error) {
 	v, err := m.GetIntAttr("Status")
 	if err != nil {
 		return false, err
@@ -298,6 +298,6 @@ func (m *GRBModel) Optimal() (bool, error) {
 	return v == 2, nil // GRB_OPTIMAL 2
 }
 
-func (m *GRBModel) ObjectiveValue() (float64, error) {
+func (m *Model) ObjectiveValue() (float64, error) {
 	return m.GetDoubleAttr("ObjVal")
 }

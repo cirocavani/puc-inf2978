@@ -3,14 +3,14 @@ package engine
 import (
 	"fmt"
 	"parallax/core"
-	"parallax/graph"
+	"parallax/fct"
 )
 
 type FirstEdges struct {
-	graphs *graph.GraphLoader
+	graphs *fct.GraphLoader
 }
 
-func NewFirstEdges(g *graph.GraphLoader) core.Engine {
+func NewFirstEdges(g *fct.GraphLoader) core.Engine {
 	return &FirstEdges{g}
 }
 
@@ -22,8 +22,11 @@ func (n *FirstEdges) ComputeBid(m *core.Match) *core.BidPack {
 	}
 	pack := core.NewBidPack(m.NumberOfEdges)
 	for i := 0; i < m.NumberOfEdges; i++ {
-		e := g.Edges[i]
-		pack.Bid(e.I.Id, e.J.Id, e.VCost)
+		e := g.Graph.Edges[i]
+		source := e.I.Data.(fct.VertexData).Id
+		sink := e.J.Data.(fct.VertexData).Id
+		price := e.Data.(fct.EdgeData).VCost
+		pack.Bid(source, sink, price)
 	}
 	return pack
 }

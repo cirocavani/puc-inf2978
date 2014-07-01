@@ -4,71 +4,108 @@ import (
 	"fmt"
 )
 
-// FCTP data model
-
 type Vertex struct {
-	Id    int
-	Size  float64
-	Edges []*Edge
+	Graph   *Graph
+	Edges   []*Edge
+	EdgeOut []*Edge
+	EdgeIn  []*Edge
+	Data    interface{}
 }
 
-func (v *Vertex) String() string {
-	return fmt.Sprintf("(%d, [%.2f,%d])", v.Id, v.Size, len(v.Edges))
+func (v *Vertex) Degree() int {
+	return len(v.Edges) + len(v.EdgeOut) + len(v.EdgeIn)
+}
+
+func (v *Vertex) OutDegree() int {
+	return len(v.Edges) + len(v.EdgeOut)
+}
+
+func (v *Vertex) InDegree() int {
+	return len(v.Edges) + len(v.EdgeIn)
 }
 
 type Edge struct {
-	I, J         *Vertex
-	VCost, FCost float64
+	Graph *Graph
+	I, J  *Vertex
+	Data  interface{}
 }
 
-func (e *Edge) String() string {
-	return fmt.Sprintf("(%d)-[%.2f,%.2f]->(%d)", e.I.Id, e.VCost, e.FCost, e.J.Id)
+func (e *Edge) Other(v *Vertex) *Vertex {
+	switch v {
+	case e.I:
+		return e.J
+	case e.J:
+		return e.I
+	default:
+		return nil
+	}
 }
 
 type Graph struct {
-	Sources, Sinks map[int]*Vertex
-	Edges          []*Edge
+	Vertices []*Vertex
+	Edges    []*Edge
+}
+
+func New() *Graph {
+	return &Graph{
+		make([]*Vertex, 0),
+		make([]*Edge, 0),
+	}
 }
 
 func (g *Graph) String() string {
-	return fmt.Sprintf("Sources %d, Sinks %d, Edges %d", len(g.Sources), len(g.Sinks), len(g.Edges))
+	return fmt.Sprintf("G(V, E) = [%d, %d]", g.Order(), g.Size())
 }
 
-func NewGraph() *Graph {
-	return &Graph{
-		Sources: make(map[int]*Vertex),
-		Sinks:   make(map[int]*Vertex),
-		Edges:   make([]*Edge, 0),
-	}
+func (g *Graph) Order() int {
+	return len(g.Vertices)
 }
 
-func (g *Graph) v(m map[int]*Vertex, id int) *Vertex {
-	v, found := m[id]
-	if !found {
-		v = &Vertex{id, .0, make([]*Edge, 0)}
-		m[id] = v
+func (g *Graph) Size() int {
+	return len(g.Edges)
+}
+
+func (g *Graph) Vertex() *Vertex {
+	v := &Vertex{
+		g,
+		make([]*Edge, 0),
+		make([]*Edge, 0),
+		make([]*Edge, 0),
+		nil,
 	}
+	g.Vertices = append(g.Vertices, v)
 	return v
 }
 
-func (g *Graph) NewEdge(i, j int, v, f float64) *Edge {
-	vi := g.v(g.Sources, i)
-	vj := g.v(g.Sinks, j)
-	e := &Edge{vi, vj, v, f}
-	vi.Edges = append(vi.Edges, e)
-	vj.Edges = append(vj.Edges, e)
+func (g *Graph) edge(vi, vj *Vertex) *Edge {
+	e := &Edge{g, vi, vj, nil}
 	g.Edges = append(g.Edges, e)
 	return e
 }
 
-func (g *Graph) SourceSize(i int, s float64) *Vertex {
-	vi := g.v(g.Sources, i)
-	vi.Size = s
-	return vi
+type EdgeBuilder struct {
+	g *Graph
+	v *Vertex
 }
 
-func (g *Graph) SinkSize(j int, s float64) *Vertex {
-	vj := g.v(g.Sinks, j)
-	vj.Size = s
-	return vj
+func (b *EdgeBuilder) With(other *Vertex) *Edge {
+	// undirected
+	one := b.v
+	e := b.g.edge(one, other)
+	one.Edges = append(one.Edges, e)
+	other.Edges = append(other.Edges, e)
+	return e
+}
+
+func (b *EdgeBuilder) To(head *Vertex) *Edge {
+	// directed
+	tail := b.v
+	e := b.g.edge(tail, head)
+	head.EdgeIn = append(head.EdgeIn, e)
+	tail.EdgeOut = append(tail.EdgeOut, e)
+	return e
+}
+
+func (g *Graph) Connect(v *Vertex) *EdgeBuilder {
+	return &EdgeBuilder{g, v}
 }

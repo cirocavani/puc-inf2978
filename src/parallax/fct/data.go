@@ -1,4 +1,4 @@
-package graph
+package fct
 
 import (
 	"bufio"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// FCTP format
+// FCT format
 
 func LoadGraph(path string, verbose int) (*Graph, error) {
 	file, err := os.Open(path)

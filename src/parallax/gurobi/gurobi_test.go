@@ -1,33 +1,31 @@
-package tool
+package grb
 
 import (
 	"testing"
 )
 
-func TestGRBEnv(t *testing.T) {
-	env, err := NewGRBEnv("test.log")
+func TestEnv(t *testing.T) {
+	env, err := NewEnv("test.log")
 	if err != nil {
-		t.Errorf("Error creating Gurobi Env: ", err)
-		return
+		t.Fatalf("Error creating Gurobi Env: ", err)
 	}
 	env.Dispose()
 }
 
-func TestGRBModel(t *testing.T) {
-	env, _ := NewGRBEnv("test.log")
+func TestModel(t *testing.T) {
+	env, _ := NewEnv("test.log")
 	defer env.Dispose()
-	model, err := NewGRBModel(env, "Model Test")
+	model, err := NewModel(env, "Model Test")
 	if err != nil {
-		t.Errorf("Error creating Gurobi Model: ", err)
-		return
+		t.Fatalf("Error creating Gurobi Model: ", err)
 	}
 	model.Dispose()
 }
 
-func TestGRBVar(t *testing.T) {
-	env, _ := NewGRBEnv("test.log")
+func TestVar(t *testing.T) {
+	env, _ := NewEnv("test.log")
 	defer env.Dispose()
-	model, _ := NewGRBModel(env, "Model Test")
+	model, _ := NewModel(env, "Model Test")
 	defer model.Dispose()
 	v_cont := model.AddContVar("v_cont", 1., 0., 10.)
 	if v_cont == nil {
@@ -51,10 +49,10 @@ func TestGRBVar(t *testing.T) {
 	}
 }
 
-func TestGRBConstr(t *testing.T) {
-	env, _ := NewGRBEnv("test.log")
+func TestConstr(t *testing.T) {
+	env, _ := NewEnv("test.log")
 	defer env.Dispose()
-	model, _ := NewGRBModel(env, "Model Test")
+	model, _ := NewModel(env, "Model Test")
 	defer model.Dispose()
 
 	/* maximize: x + y + 2 z */
@@ -66,12 +64,12 @@ func TestGRBConstr(t *testing.T) {
 	model.Update()
 
 	/* First constraint: x + 2 y + 3 z <= 4 */
-	c1 := model.AddConstr("1", ConstrExpr{x: 1., y: 2., z: 3.}, GRB_LESS_EQUAL, 4.)
+	c1 := model.AddConstr("1", ConstrExpr{x: 1., y: 2., z: 3.}, LESS_EQUAL, 4.)
 	if c1 == nil {
 		t.Errorf("Error creating Gurobi Constraint: x + 2 y + 3 z <= 4!")
 	}
 	/* Second constraint: x + y >= 1 */
-	c2 := model.AddConstr("2", ConstrExpr{x: 1., y: 1.}, GRB_GREATER_EQUAL, 1.)
+	c2 := model.AddConstr("2", ConstrExpr{x: 1., y: 1.}, GREATER_EQUAL, 1.)
 	if c2 == nil {
 		t.Errorf("Error creating Gurobi Constraint: x + y >= 1!")
 	}
@@ -79,10 +77,10 @@ func TestGRBConstr(t *testing.T) {
 	//model.Optimize()
 }
 
-func TestGRBModelUpdate(t *testing.T) {
-	env, _ := NewGRBEnv("test.log")
+func TestModelUpdate(t *testing.T) {
+	env, _ := NewEnv("test.log")
 	defer env.Dispose()
-	model, _ := NewGRBModel(env, "Model Test")
+	model, _ := NewModel(env, "Model Test")
 	defer model.Dispose()
 	model.AddContVar("v_cont", 1., 0., 10.)
 	err := model.Update()
@@ -91,10 +89,10 @@ func TestGRBModelUpdate(t *testing.T) {
 	}
 }
 
-func TestGRBModelOptimize(t *testing.T) {
-	env, _ := NewGRBEnv("test.log")
+func TestModelOptimize(t *testing.T) {
+	env, _ := NewEnv("test.log")
 	defer env.Dispose()
-	model, _ := NewGRBModel(env, "Model Test")
+	model, _ := NewModel(env, "Model Test")
 	defer model.Dispose()
 	model.AddContVar("v_cont", 1., 0., 10.)
 	model.Update()
@@ -105,9 +103,9 @@ func TestGRBModelOptimize(t *testing.T) {
 }
 
 func TestQuickStart(t *testing.T) {
-	env, _ := NewGRBEnv("test.log")
+	env, _ := NewEnv("test.log")
 	defer env.Dispose()
-	model, _ := NewGRBModel(env, "Model Test")
+	model, _ := NewModel(env, "Model Test")
 	defer model.Dispose()
 
 	/* maximize: x + y + 2 z */
@@ -119,43 +117,37 @@ func TestQuickStart(t *testing.T) {
 	model.Update()
 
 	/* First constraint: x + 2 y + 3 z <= 4 */
-	model.AddConstr("1", ConstrExpr{x: 1., y: 2., z: 3.}, GRB_LESS_EQUAL, 4.)
+	model.AddConstr("1", ConstrExpr{x: 1., y: 2., z: 3.}, LESS_EQUAL, 4.)
 	/* Second constraint: x + y >= 1 */
-	model.AddConstr("2", ConstrExpr{x: 1., y: 1.}, GRB_GREATER_EQUAL, 1.)
+	model.AddConstr("2", ConstrExpr{x: 1., y: 1.}, GREATER_EQUAL, 1.)
 
 	model.Optimize()
 
 	opt, err := model.Optimal()
 	if err != nil {
-		t.Errorf("Error reading Optimal Status: ", err)
-		return
+		t.Fatalf("Error reading Optimal Status: ", err)
 	}
 	if !opt {
-		t.Errorf("Model is not optimal!")
-		return
+		t.Fatalf("Model is not optimal!")
 	}
 	obj, err := model.ObjectiveValue()
 	if err != nil {
-		t.Errorf("Error reading Optimal Objective: ", err)
-		return
+		t.Fatalf("Error reading Optimal Objective: ", err)
 	}
 	t.Logf("Optimal Objective: %f\n", obj)
 	vx, err := x.Value()
 	if err != nil {
-		t.Errorf("Error reading X: ", err)
-		return
+		t.Fatalf("Error reading X: ", err)
 	}
 	t.Logf("x: %f\n", vx)
 	vy, err := y.Value()
 	if err != nil {
-		t.Errorf("Error reading Y: ", err)
-		return
+		t.Fatalf("Error reading Y: ", err)
 	}
 	t.Logf("y: %f\n", vy)
 	vz, err := z.Value()
 	if err != nil {
-		t.Errorf("Error reading Z: ", err)
-		return
+		t.Fatalf("Error reading Z: ", err)
 	}
 	t.Logf("z: %f\n", vz)
 }

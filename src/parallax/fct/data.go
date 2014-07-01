@@ -122,18 +122,37 @@ func LoadGraph(path string, verbose int) (*Graph, error) {
 	return g, nil
 }
 
-type GraphLoader struct {
+type GraphLoader interface {
+	Instance(name string) *Graph
+}
+
+type StaticLoader struct {
+	data map[string]*Graph
+}
+
+func NewStaticLoader(data map[string]*Graph) *StaticLoader {
+	return &StaticLoader{data}
+}
+
+func (d *StaticLoader) Instance(name string) *Graph {
+	if g, ok := d.data[name]; ok {
+		return g
+	}
+	return nil
+}
+
+type FileLoader struct {
 	dataPath string
-	cache    map[string]*Graph
+	data     map[string]*Graph
 	verbose  int
 }
 
-func NewLoader(dataPath string, verbose int) *GraphLoader {
-	return &GraphLoader{dataPath, make(map[string]*Graph), verbose}
+func NewFileLoader(dataPath string, verbose int) *FileLoader {
+	return &FileLoader{dataPath, make(map[string]*Graph), verbose}
 }
 
-func (d *GraphLoader) Instance(name string) *Graph {
-	if g, ok := d.cache[name]; ok {
+func (d *FileLoader) Instance(name string) *Graph {
+	if g, ok := d.data[name]; ok {
 		return g
 	}
 	fmt.Print("Loading ", name, "... ")
@@ -142,12 +161,12 @@ func (d *GraphLoader) Instance(name string) *Graph {
 		fmt.Println("Error:", err)
 		return nil
 	}
-	d.cache[name] = g
+	d.data[name] = g
 	fmt.Println(g)
 	return g
 }
 
-func (d *GraphLoader) LoadAll() {
+func (d *FileLoader) LoadAll() {
 	folder, err := os.Open(d.dataPath)
 	if err != nil {
 		fmt.Println("Error opening folder:", d.dataPath, err)
@@ -173,9 +192,9 @@ func (d *GraphLoader) LoadAll() {
 			continue
 		}
 		name := strings.TrimSuffix(file, ".DAT")
-		d.cache[name] = g
+		d.data[name] = g
 		fmt.Println(g)
 	}
 
-	fmt.Println("Total:", len(d.cache))
+	fmt.Println("Total:", len(d.data))
 }

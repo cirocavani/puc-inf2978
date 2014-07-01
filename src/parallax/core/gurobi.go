@@ -8,8 +8,8 @@ import (
 	"parallax/gurobi"
 )
 
-func NewGurobiBidEngine(graph *fct.Graph) *BidEngine {
-	return &BidEngine{graph, NewGurobiSolver()}
+func NewGurobiFlowEngine(graph *fct.Graph) *FlowEngine {
+	return &FlowEngine{graph, NewGurobiSolver()}
 }
 
 func NewGurobiSolver() *GurobiSolver {
@@ -98,7 +98,7 @@ func (*GurobiSolver) ComputeFlow(g *fct.Graph) ([]*EdgeFlow, error) {
 func edge(e *graph.Edge) (string, float64, float64) {
 	source := e.I.Data.(*fct.VertexData)
 	sink := e.J.Data.(*fct.VertexData)
-	name := fmt.Sprint("%d:%d", source.Id, sink.Id)
+	name := fmt.Sprint(source.Id, ":", sink.Id)
 
 	obj := e.Data.(*fct.EdgeData).VCost
 
@@ -112,7 +112,7 @@ func edge(e *graph.Edge) (string, float64, float64) {
 
 func vertex(v *graph.Vertex) (string, float64) {
 	_v := v.Data.(*fct.VertexData)
-	return fmt.Sprint("Vertex %d", _v.Id), _v.Size
+	return fmt.Sprint("Vertex ", _v.Id), _v.Size
 }
 
 func flow(e *graph.Edge, amount float64) *EdgeFlow {

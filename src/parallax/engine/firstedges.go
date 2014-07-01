@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"parallax/core"
 	"parallax/fct"
+	"parallax/graph"
 )
 
 type FirstEdges struct {
-	graphs *fct.GraphLoader
+	graphs fct.GraphLoader
+	factor int
 }
 
-func NewFirstEdges(g *fct.GraphLoader) core.Engine {
-	return &FirstEdges{g}
+func NewFirstEdges(g fct.GraphLoader, factor int) core.BidEngine {
+	return &FirstEdges{g, factor}
 }
 
 func (n *FirstEdges) ComputeBid(m *core.Match) *core.BidPack {
@@ -22,13 +24,19 @@ func (n *FirstEdges) ComputeBid(m *core.Match) *core.BidPack {
 	}
 	pack := core.NewBidPack(m.NumberOfEdges)
 	for i := 0; i < m.NumberOfEdges; i++ {
-		e := g.Graph.Edges[i]
-		source := e.I.Data.(fct.VertexData).Id
-		sink := e.J.Data.(fct.VertexData).Id
-		price := e.Data.(fct.EdgeData).VCost
+		e := g.Edges[i]
+		source, sink, price := n.bid(e)
 		pack.Bid(source, sink, price)
 	}
 	return pack
+}
+
+func (n *FirstEdges) bid(e *graph.Edge) (int, int, float64) {
+	source := e.I.Data.(fct.VertexData).Id
+	sink := e.J.Data.(fct.VertexData).Id
+	price := e.Data.(fct.EdgeData).VCost
+	factor := float64(n.factor)
+	return source, sink, factor * price
 }
 
 func (n *FirstEdges) Update(f *core.Flow) {

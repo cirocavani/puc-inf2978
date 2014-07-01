@@ -24,12 +24,12 @@ func main() {
 	fmt.Println("Threads:", *optThreads)
 	runtime.GOMAXPROCS(*optThreads)
 
-	graphs := fct.NewLoader(*optData, *verbose)
+	graphs := fct.NewFileLoader(*optData, *verbose)
 	if *optPreload {
 		graphs.LoadAll()
 	}
 
-	n := engine.NewFirstEdges(graphs)
+	n := engine.NewFirstEdges(graphs, 1)
 	h := core.NewHandler(*optName, n, *verbose)
 	h.Connect(*optServer)
 }

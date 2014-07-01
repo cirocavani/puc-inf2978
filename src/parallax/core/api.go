@@ -19,6 +19,10 @@ type Flow struct {
 	Streams []*Stream
 }
 
+func (f *Flow) String() string {
+	return fmt.Sprint("Number of Edges ", len(f.Streams))
+}
+
 type Stream struct {
 	Source, Sink int
 	Amount       float64
@@ -27,8 +31,8 @@ type Stream struct {
 	NumberOfBids int
 }
 
-func (f *Flow) String() string {
-	return fmt.Sprint("Number of Edges ", len(f.Streams))
+func (s *Stream) String() string {
+	return fmt.Sprintf("(%d)-[%.2f]->(%d) [%s, %.2f, %d]", s.Source, s.Amount, s.Sink, s.Owner, s.Price, s.NumberOfBids)
 }
 
 type Bid struct {

@@ -6,18 +6,18 @@ import (
 	"parallax/graph"
 )
 
-type BidEngine struct {
+type FlowEngine struct {
 	graph  *fct.Graph
 	solver Solver
 }
 
-func NewBidEngine(graph *fct.Graph, solver Solver) *BidEngine {
-	return &BidEngine{graph, solver}
+func NewFlowEngine(graph *fct.Graph, solver Solver) *FlowEngine {
+	return &FlowEngine{graph, solver}
 }
 
-func (e *BidEngine) ComputeFlow(bids map[string]*BidPack) (*Flow, error) {
-	_g, bidMap := BidGraph(e.graph, bids)
-	flow, err := e.solver.ComputeFlow(_g)
+func (n *FlowEngine) ComputeFlow(bids map[string]*BidPack) (*Flow, error) {
+	_g, bidMap := BidGraph(n.graph, bids)
+	flow, err := n.solver.ComputeFlow(_g)
 	if err != nil {
 		return nil, err
 	}

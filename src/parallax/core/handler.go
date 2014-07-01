@@ -11,18 +11,18 @@ import (
 
 // Game Protocol - Handler
 
-type Engine interface {
+type BidEngine interface {
 	ComputeBid(m *Match) *BidPack
 	Update(f *Flow)
 }
 
 type Handler struct {
 	name    string
-	engine  Engine
+	engine  BidEngine
 	verbose int
 }
 
-func NewHandler(name string, engine Engine, verbose int) *Handler {
+func NewHandler(name string, engine BidEngine, verbose int) *Handler {
 	return &Handler{name, engine, verbose}
 }
 

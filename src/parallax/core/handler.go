@@ -11,11 +11,6 @@ import (
 
 // Game Protocol - Handler
 
-type BidEngine interface {
-	ComputeBid(m *Match) *BidPack
-	Update(f *Flow)
-}
-
 type Handler struct {
 	name    string
 	engine  BidEngine

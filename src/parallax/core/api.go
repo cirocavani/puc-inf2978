@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+type BidEngine interface {
+	ComputeBid(m *Match) *BidPack
+	Update(f *Flow)
+}
+
 // Game Protocol - API
 
 type Match struct {

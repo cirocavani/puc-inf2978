@@ -8,6 +8,10 @@ import (
 	"parallax/gurobi"
 )
 
+func NewGurobiBidEngine(graph *fct.Graph) *BidEngine {
+	return &BidEngine{graph, NewGurobiSolver()}
+}
+
 func NewGurobiSolver() *GurobiSolver {
 	return &GurobiSolver{}
 }

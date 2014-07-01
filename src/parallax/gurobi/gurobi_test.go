@@ -125,29 +125,29 @@ func TestQuickStart(t *testing.T) {
 
 	opt, err := model.Optimal()
 	if err != nil {
-		t.Fatalf("Error reading Optimal Status: ", err)
+		t.Fatal("Error reading Optimal Status:", err)
 	}
 	if !opt {
-		t.Fatalf("Model is not optimal!")
+		t.Fatal("Model is not optimal!")
 	}
 	obj, err := model.ObjectiveValue()
 	if err != nil {
-		t.Fatalf("Error reading Optimal Objective: ", err)
+		t.Fatal("Error reading Optimal Objective:", err)
 	}
 	t.Logf("Optimal Objective: %f\n", obj)
 	vx, err := x.Value()
 	if err != nil {
-		t.Fatalf("Error reading X: ", err)
+		t.Fatal("Error reading X:", err)
 	}
 	t.Logf("x: %f\n", vx)
 	vy, err := y.Value()
 	if err != nil {
-		t.Fatalf("Error reading Y: ", err)
+		t.Fatal("Error reading Y:", err)
 	}
 	t.Logf("y: %f\n", vy)
 	vz, err := z.Value()
 	if err != nil {
-		t.Fatalf("Error reading Z: ", err)
+		t.Fatal("Error reading Z:", err)
 	}
 	t.Logf("z: %f\n", vz)
 }

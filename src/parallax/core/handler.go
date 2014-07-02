@@ -73,13 +73,13 @@ func (h *Handler) Run(conn io.ReadWriter) {
 			}
 			h.engine.Update(n)
 		} else if strings.HasPrefix(m, "end") {
-			n, err := parseProffits(m, master)
+			n, err := parseProfits(m, master)
 			if err != nil {
 				fmt.Println(err)
 				break
 			}
 			if h.verbose > 0 {
-				fmt.Println("Proffit:", n)
+				fmt.Println("Profit:", n)
 			}
 			fmt.Println("Parallax> that's all for now!")
 			break
@@ -163,7 +163,7 @@ func parseFlow(m string, buf *bufio.Reader) (*Flow, error) {
 	return &Flow{streams}, nil
 }
 
-func parseProffit(m string) (*Proffit, error) {
+func parseProfit(m string) (*Profit, error) {
 	n := strings.Fields(m)
 	if len(n) != 2 {
 		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
@@ -171,32 +171,32 @@ func parseProffit(m string) (*Proffit, error) {
 	name := n[0]
 	value, err := strconv.ParseFloat(n[1], 64)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing value of proffits: %s", err)
+		return nil, fmt.Errorf("Error parsing value of profits: %s", err)
 	}
-	return &Proffit{name, value}, nil
+	return &Profit{name, value}, nil
 }
 
-func parseProffits(m string, buf *bufio.Reader) (ProffitSlice, error) {
+func parseProfits(m string, buf *bufio.Reader) (ProfitSlice, error) {
 	n := strings.Fields(m)
 	if len(n) != 2 {
 		return nil, fmt.Errorf("Wrong number of fields (2): %d", len(n))
 	}
 	k, err := strconv.ParseInt(n[1], 10, 0)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing number of proffits: %s", err)
+		return nil, fmt.Errorf("Error parsing number of profits: %s", err)
 	}
-	proffits := make(ProffitSlice, k)
+	profits := make(ProfitSlice, k)
 	for i := 0; i < int(k); i++ {
 		p, err := buf.ReadString('\n')
 		if err != nil {
-			return nil, fmt.Errorf("Error reading proffit (%d): %s", i+1, err)
+			return nil, fmt.Errorf("Error reading profit (%d): %s", i+1, err)
 		}
 		p = strings.TrimSpace(p)
-		pi, err := parseProffit(p)
+		pi, err := parseProfit(p)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing proffit (%d): %s", i+1, err)
+			return nil, fmt.Errorf("Error parsing profit (%d): %s", i+1, err)
 		}
-		proffits[i] = pi
+		profits[i] = pi
 	}
-	return proffits, nil
+	return profits, nil
 }

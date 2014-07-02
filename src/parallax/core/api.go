@@ -83,18 +83,18 @@ func (p *BidPack) Bid(source, sink int, price float64) *Bid {
 	return bid
 }
 
-type Proffit struct {
+type Profit struct {
 	name  string
 	value float64
 }
 
-type ProffitSlice []*Proffit
+type ProfitSlice []*Profit
 
-func (p *Proffit) String() string {
+func (p *Profit) String() string {
 	return fmt.Sprintf("%s %.2f", p.name, p.value)
 }
 
-func (pp ProffitSlice) String() string {
+func (pp ProfitSlice) String() string {
 	out := ""
 	for i, p := range pp {
 		if i != 0 {

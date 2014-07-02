@@ -27,6 +27,7 @@ func (e *EdgeData) String() string {
 type Graph struct {
 	*graph.Graph
 	Sources, Sinks map[int]*graph.Vertex
+	EdgeMap        map[string]*graph.Edge
 }
 
 func (g *Graph) String() string {
@@ -38,6 +39,7 @@ func NewGraph() *Graph {
 		graph.New(),
 		make(map[int]*graph.Vertex),
 		make(map[int]*graph.Vertex),
+		make(map[string]*graph.Edge),
 	}
 }
 
@@ -64,6 +66,8 @@ func (g *Graph) NewEdge(source, sink int, v, f float64) *graph.Edge {
 	vsink := g.v(g.Sinks, sink)
 	e := g.Connect(vsource).To(vsink)
 	e.Data = &EdgeData{v, f}
+	key := fmt.Sprint(source, ":", sink)
+	g.EdgeMap[key] = e
 	return e
 }
 
@@ -77,4 +81,12 @@ func (g *Graph) SinkSize(id int, s float64) *graph.Vertex {
 	v := g.v(g.Sinks, id)
 	v.Data.(*VertexData).Size = s
 	return v
+}
+
+func (g *Graph) Edge(source, sink int) *graph.Edge {
+	key := fmt.Sprint(source, ":", sink)
+	if e, found := g.EdgeMap[key]; found {
+		return e
+	}
+	return nil
 }

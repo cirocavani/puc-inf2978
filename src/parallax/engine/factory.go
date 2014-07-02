@@ -8,6 +8,7 @@ import (
 const (
 	BID_RANDOM_EDGES string = "RandomEdges"
 	BID_FIRST_EDGES         = "FirstEdges"
+	BID_GUROBI_EDGES string = "GurobiEdges"
 )
 
 func New(name string, graphs fct.GraphLoader, factor int) core.BidEngine {
@@ -16,6 +17,8 @@ func New(name string, graphs fct.GraphLoader, factor int) core.BidEngine {
 		return NewRandomEdges(graphs, factor)
 	case BID_FIRST_EDGES:
 		return NewFirstEdges(graphs, factor)
+	case BID_GUROBI_EDGES:
+		return NewGurobiEdges(graphs, factor)
 	default:
 		return nil
 	}

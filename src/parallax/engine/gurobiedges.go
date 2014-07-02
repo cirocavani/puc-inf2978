@@ -35,7 +35,7 @@ func (n *GurobiEdges) ComputeBid(m *core.Match) *core.BidPack {
 	factor := float64(n.factor)
 	for i, k := len(r)-1, 0; k < m.NumberOfEdges && i > -1; i, k = i-1, k+1 {
 		ef := r[i]
-		e := g.Edge(ef.Source, ef.Sink)
+		e, _ := g.Edge(ef.Source, ef.Sink)
 		price := e.Data.(*fct.EdgeData).VCost
 		pack.Bid(ef.Source, ef.Sink, price*factor)
 	}

@@ -24,6 +24,10 @@ func (e *EdgeData) String() string {
 	return fmt.Sprintf("[%.2f, %.2f]", e.VCost, e.FCost)
 }
 
+func EdgeKey(source, sink int) string {
+	return fmt.Sprint(source, ":", sink)
+}
+
 type Graph struct {
 	*graph.Graph
 	Sources, Sinks map[int]*graph.Vertex
@@ -83,10 +87,10 @@ func (g *Graph) SinkSize(id int, s float64) *graph.Vertex {
 	return v
 }
 
-func (g *Graph) Edge(source, sink int) *graph.Edge {
-	key := fmt.Sprint(source, ":", sink)
+func (g *Graph) Edge(source, sink int) (*graph.Edge, string) {
+	key := EdgeKey(source, sink)
 	if e, found := g.EdgeMap[key]; found {
-		return e
+		return e, key
 	}
-	return nil
+	return nil, key
 }

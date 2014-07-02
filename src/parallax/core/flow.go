@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"parallax/fct"
-	"parallax/graph"
 )
 
 type FlowEngine struct {
@@ -57,27 +56,23 @@ func BidGraph(g *fct.Graph, bids map[string]*BidPack) (*fct.Graph, map[string]*E
 		result.SinkSize(_v.Id, _v.Size)
 	}
 
-	edges := make(map[string]*graph.Edge)
 	for _, e := range g.Edges {
 		source := e.I.Data.(*fct.VertexData)
 		sink := e.J.Data.(*fct.VertexData)
 		_e := e.Data.(*fct.EdgeData)
 		vcost := 20 * _e.VCost
 		fcost := _e.FCost
-
-		name := fmt.Sprint(source.Id, ":", sink.Id)
-		edges[name] = result.NewEdge(source.Id, sink.Id, vcost, fcost)
+		result.NewEdge(source.Id, sink.Id, vcost, fcost)
 	}
 
 	bidMap := make(map[string]*EdgeBid)
 	for owner, pack := range bids {
 		for _, bid := range pack.bids {
-			name := fmt.Sprint(bid.source, ":", bid.sink)
-			e, found := edges[name]
-			if !found {
+			e, key := result.Edge(bid.source, bid.sink)
+			if e == nil {
 				continue
 			}
-			ebid, found := bidMap[name]
+			ebid, found := bidMap[key]
 			if !found {
 				ebid = &EdgeBid{
 					bid.source,
@@ -86,7 +81,7 @@ func BidGraph(g *fct.Graph, bids map[string]*BidPack) (*fct.Graph, map[string]*E
 					0.,
 					0,
 				}
-				bidMap[name] = ebid
+				bidMap[key] = ebid
 			}
 			_e := e.Data.(*fct.EdgeData)
 			if bid.price < _e.VCost {
@@ -107,8 +102,8 @@ func BidGraph(g *fct.Graph, bids map[string]*BidPack) (*fct.Graph, map[string]*E
 func BidFlow(edges []*EdgeFlow, bids map[string]*EdgeBid) *Flow {
 	result := make([]*Stream, 0)
 	for _, e := range edges {
-		name := fmt.Sprint(e.Source, ":", e.Sink)
-		bid, found := bids[name]
+		key := fct.EdgeKey(e.Source, e.Sink)
+		bid, found := bids[key]
 		if !found {
 			continue
 		}

@@ -9,12 +9,7 @@ import (
 	"runtime"
 )
 
-const (
-	BID_RANDOM_EDGES string = "RandomEdges"
-	BID_FIRST_EDGES         = "FirstEdges"
-)
-
-var optEngine = flag.String("name", "RandomEdges", "Engine Name (RandomEdges, FirstEdges, ...)")
+var optEngine = flag.String("name", engine.BID_RANDOM_EDGES, "Engine Name (RandomEdges, FirstEdges, ...)")
 var optFactor = flag.Int("factor", 20, "Price multiplication factor (Variable cost)")
 var optFile = flag.String("instance", "./data/N104.DAT", "FCTP data file name")
 var optThreads = flag.Int("threads", runtime.NumCPU(), "Number of system threads")
@@ -39,7 +34,7 @@ func main() {
 	graphs := fct.NewStaticLoader(map[string]*fct.Graph{gname: g})
 
 	// Computing Bids
-	n := NewEngine(*optEngine, graphs)
+	n := engine.New(*optEngine, graphs, *optFactor)
 	if n == nil {
 		fmt.Println("Error loading engine:", *optEngine)
 		return
@@ -53,18 +48,11 @@ func main() {
 		fmt.Println("Error computing flow:", gname, err)
 		return
 	}
+
+	if len(r.Streams) == 0 {
+		fmt.Println("No bids selected!")
+	}
 	for _, s := range r.Streams {
 		fmt.Println(s)
-	}
-}
-
-func NewEngine(name string, graphs fct.GraphLoader) core.BidEngine {
-	switch name {
-	case BID_RANDOM_EDGES:
-		return engine.NewRandomEdges(graphs, *optFactor)
-	case BID_FIRST_EDGES:
-		return engine.NewFirstEdges(graphs, *optFactor)
-	default:
-		return nil
 	}
 }

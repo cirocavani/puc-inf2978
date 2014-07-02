@@ -32,9 +32,9 @@ func (n *FirstEdges) ComputeBid(m *core.Match) *core.BidPack {
 }
 
 func (n *FirstEdges) bid(e *graph.Edge) (int, int, float64) {
-	source := e.I.Data.(fct.VertexData).Id
-	sink := e.J.Data.(fct.VertexData).Id
-	price := e.Data.(fct.EdgeData).VCost
+	source := e.I.Data.(*fct.VertexData).Id
+	sink := e.J.Data.(*fct.VertexData).Id
+	price := e.Data.(*fct.EdgeData).VCost
 	factor := float64(n.factor)
 	return source, sink, factor * price
 }

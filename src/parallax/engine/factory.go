@@ -11,7 +11,7 @@ const (
 	BID_GUROBI_EDGES string = "GurobiEdges"
 )
 
-func New(name string, graphs fct.GraphLoader, factor int) core.BidEngine {
+func New(name string, graphs fct.GraphLoader, factor float64) core.BidEngine {
 	switch name {
 	case BID_RANDOM_EDGES:
 		return NewRandomEdges(graphs, factor)

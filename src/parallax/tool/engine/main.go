@@ -10,7 +10,7 @@ import (
 )
 
 var optEngine = flag.String("name", engine.BID_RANDOM_EDGES, "Engine Name (RandomEdges, FirstEdges, ...)")
-var optFactor = flag.Int("factor", 20, "Price multiplication factor (Variable cost)")
+var optFactor = flag.Float64("factor", 2., "Price multiplication factor (Variable cost)")
 var optFile = flag.String("instance", "./data/N104.DAT", "FCTP data file name")
 var optThreads = flag.Int("threads", runtime.NumCPU(), "Number of system threads")
 var verbose = flag.Int("verbose", 1, "Print a lot of messages, level 0, 1, 2, 3")
@@ -39,7 +39,15 @@ func main() {
 		fmt.Println("Error loading engine:", *optEngine)
 		return
 	}
-	bids := n.ComputeBid(&core.Match{gname, 5})
+	k := int(20 * g.Size() / 100)
+	if k < 1 {
+		k = 1
+	}
+	m := &core.Match{gname, k}
+	bids := n.ComputeBid(m)
+
+	fmt.Println(m)
+	fmt.Println(bids)
 
 	// Computing Flow
 	w := core.NewGurobiFlowEngine(g)

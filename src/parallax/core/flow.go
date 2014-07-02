@@ -15,7 +15,8 @@ func NewFlowEngine(graph *fct.Graph, solver Solver) *FlowEngine {
 }
 
 func (n *FlowEngine) ComputeFlow(bids map[string]*BidPack) (*Flow, error) {
-	_g, bidMap := BidGraph(n.graph, bids)
+	factor := 20.0
+	_g, bidMap := BidGraph(n.graph, bids, factor)
 	flow, err := n.solver.ComputeFlow(_g)
 	if err != nil {
 		return nil, err
@@ -36,6 +37,12 @@ func (e *EdgeFlow) String() string {
 	return fmt.Sprintf("(%d)-[%.2f]->(%d)", e.Source, e.Amount, e.Sink)
 }
 
+type FlowSort []*EdgeFlow
+
+func (v FlowSort) Len() int           { return len(v) }
+func (v FlowSort) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
+func (v FlowSort) Less(i, j int) bool { return v[i].Amount < v[j].Amount }
+
 type EdgeBid struct {
 	source, sink int
 	owners       []string
@@ -43,11 +50,10 @@ type EdgeBid struct {
 	count        int
 }
 
-func BidGraph(g *fct.Graph, bids map[string]*BidPack) (*fct.Graph, map[string]*EdgeBid) {
+func BidGraph(g *fct.Graph, bids map[string]*BidPack, factor float64) (*fct.Graph, map[string]*EdgeBid) {
 	result := g.Clone()
 
-	factor := 20.
-	for _, e := range g.Edges {
+	for _, e := range result.Edges {
 		_e := e.Data.(*fct.EdgeData)
 		_e.VCost *= factor
 	}

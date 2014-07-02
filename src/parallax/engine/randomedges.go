@@ -10,28 +10,28 @@ import (
 )
 
 type RandomEdges struct {
-	graphs     fct.GraphLoader
+	*graphEngine
 	maxFactor  int
 	irnd, frnd *rand.Rand
 }
 
-func NewRandomEdges(g fct.GraphLoader, maxFactor int) core.BidEngine {
+func NewRandomEdges(g fct.GraphLoader, factor float64) core.BidEngine {
 	t := time.Now().UnixNano()
 	src := rand.NewSource(t)
 	irnd := rand.New(src)
 	frnd := rand.New(src)
-	return &RandomEdges{g, maxFactor, irnd, frnd}
+	return &RandomEdges{newGraphEngine(g), int(factor), irnd, frnd}
 }
 
 func (n *RandomEdges) ComputeBid(m *core.Match) *core.BidPack {
-	g := n.graphs.Instance(m.InstanceName)
-	if g == nil {
+	n.setup(m.InstanceName)
+	if n.current == nil {
 		fmt.Println("Instance not found:", m.InstanceName)
 		return core.EmptyBidPack()
 	}
 
 	pack := core.NewBidPack(m.NumberOfEdges)
-	emax := g.Size()
+	emax := n.current.Size()
 	eidx := make(map[int]bool)
 	for k := 0; k < m.NumberOfEdges; {
 		i := n.irnd.Intn(emax)
@@ -40,7 +40,8 @@ func (n *RandomEdges) ComputeBid(m *core.Match) *core.BidPack {
 		}
 		eidx[i] = true
 		k++
-		source, sink, price := n.bid(g.Edges[i])
+		e := n.current.Edges[i]
+		source, sink, price := n.bid(e)
 		pack.Bid(source, sink, price)
 	}
 	return pack
@@ -52,7 +53,4 @@ func (n *RandomEdges) bid(e *graph.Edge) (int, int, float64) {
 	price := e.Data.(*fct.EdgeData).VCost
 	factor := 1. + float64(n.frnd.Intn(n.maxFactor))
 	return source, sink, factor * price
-}
-
-func (n *RandomEdges) Update(f *core.Flow) {
 }

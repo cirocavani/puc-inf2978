@@ -37,7 +37,8 @@ func (n *GurobiEdges) ComputeBid(m *core.Match) *core.BidPack {
 	sort.Sort(NewProfitSort(n.current, flow))
 	pack := core.NewBidPack(m.NumberOfEdges)
 	factor := n.factor
-	for i, k := len(flow)-1, 0; k < m.NumberOfEdges && i > -1; i, k = i-1, k+1 {
+	max := 100 //m.NumberOfEdges
+	for i, k := len(flow)-1, 0; k < max && i > -1; i, k = i-1, k+1 {
 		ef := flow[i]
 		e, _ := n.current.Edge(ef.Source, ef.Sink)
 		price := e.Data.(*fct.EdgeData).VCost
@@ -55,8 +56,9 @@ func NewProfitSort(g *fct.Graph, flow []*core.EdgeFlow) *ProfitSort {
 	profit := make([]float64, len(flow))
 	for i, ef := range flow {
 		e, _ := g.Edge(ef.Source, ef.Sink)
-		v := e.Data.(*fct.EdgeData).VCost
-		profit[i] = ef.Amount * v
+		_e := e.Data.(*fct.EdgeData)
+		v, f := _e.VCost, _e.FCost
+		profit[i] = ef.Amount*v - f
 	}
 	return &ProfitSort{profit, flow}
 }

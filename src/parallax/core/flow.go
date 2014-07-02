@@ -44,25 +44,12 @@ type EdgeBid struct {
 }
 
 func BidGraph(g *fct.Graph, bids map[string]*BidPack) (*fct.Graph, map[string]*EdgeBid) {
-	result := fct.NewGraph()
+	result := g.Clone()
 
-	for _, v := range g.Sources {
-		_v := v.Data.(*fct.VertexData)
-		result.SourceSize(_v.Id, _v.Size)
-	}
-
-	for _, v := range g.Sinks {
-		_v := v.Data.(*fct.VertexData)
-		result.SinkSize(_v.Id, _v.Size)
-	}
-
+	factor := 20.
 	for _, e := range g.Edges {
-		source := e.I.Data.(*fct.VertexData)
-		sink := e.J.Data.(*fct.VertexData)
 		_e := e.Data.(*fct.EdgeData)
-		vcost := 20 * _e.VCost
-		fcost := _e.FCost
-		result.NewEdge(source.Id, sink.Id, vcost, fcost)
+		_e.VCost *= factor
 	}
 
 	bidMap := make(map[string]*EdgeBid)
